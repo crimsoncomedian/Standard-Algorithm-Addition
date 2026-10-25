@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Standard Algorithm Addition</title>
+<style>
+:root{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#18253a;background:#f5f7fb}*{box-sizing:border-box}body{margin:0;padding:20px}.app{max-width:640px;margin:auto}
+h1{font-size:clamp(22px,4vw,30px);margin:0 0 6px;text-align:center}.sub{color:#5e6d81;font-size:14px;text-align:center;margin:0 auto 6px;max-width:460px}
+.card{background:#fff;border:1px solid #d9e1eb;border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 2px 8px #152b4310}
+.tray{display:flex;gap:14px;justify-content:center;align-items:center;min-height:84px;border:2px dashed #afbed1;border-radius:14px;padding:10px;color:#8491a2;font-size:14px}
+.tray.over,.cells.over{border-color:#5144c6;background:#f0eefc}
+.tile{font-size:34px;font-weight:800;padding:10px 20px;border:2px solid #5144c6;background:#fff;color:#18253a;border-radius:12px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-variant-numeric:tabular-nums;box-shadow:0 2px 6px #5144c622}
+.tile:focus-visible,.slot:focus-visible{outline:3px solid #7268e4;outline-offset:2px}
+.ghost{position:fixed;z-index:50;pointer-events:none;opacity:.9;margin:0}
+.frame{display:flex;flex-direction:column;align-items:center;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center}
+.sg{width:40px;text-align:center;font-size:38px;font-weight:700;color:#5e6d81}
+.cells{display:flex;border:2px solid transparent;border-radius:12px}
+.cells.empty{border-color:#afbed1;border-style:dashed;min-height:68px}
+.slot[role=button]{cursor:grab;touch-action:none}
+.c{width:64px;height:68px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;border-radius:10px}
+.c.act{background:#eeeafe}
+.row.cr .c{height:44px}
+.row.top,.row.bot{margin:5px 0}
+.row.bot .cells{border-bottom:4px solid #18253a;border-radius:0 0 4px 4px;padding-bottom:2px}
+.row.bot .cells.empty{border-radius:12px;padding:0}
+.row.ar{margin-top:8px}
+.abox,.afix{width:56px;height:62px;font-size:38px;font-weight:800;text-align:center;border-radius:10px;font-family:inherit;padding:0}
+.abox{border:3px solid #5144c6;background:#fff;color:#18253a}
+.abox:focus{outline:3px solid #b6aef5;outline-offset:1px}
+.afix{display:flex;align-items:center;justify-content:center;border:3px solid #2e9e62;background:#f1faf5}
+.afix.wait{border:2px dashed #cdd6e2;background:transparent}
+.cbox,.cfix{width:38px;height:38px;font-size:22px;font-weight:800;text-align:center;border-radius:8px;font-family:inherit;padding:0}
+.cbox{border:2px solid #e08a1e;background:#fff8ee;color:#18253a}
+.cbox:focus{outline:3px solid #f6cf9c;outline-offset:1px}
+.cfix{display:flex;align-items:center;justify-content:center;border:2px solid #e08a1e;background:#fff8ee;color:#a35d0b}
+.msg{text-align:center;min-height:26px;font-weight:700;margin-top:10px;color:#bb3d3d}.msg.good{color:#18845a;font-size:18px}
+.help{text-align:center;color:#5e6d81;font-size:14px;margin-top:8px}
+.next{display:block;margin:6px auto 0;border:0;border-radius:10px;background:#5144c6;color:#fff;font-weight:700;font-size:16px;padding:12px 20px;cursor:pointer}
+.title2{text-align:center;font-weight:700;margin:0 0 10px}
+@media(max-width:400px){.c{width:54px}.sg{width:30px}.tile{font-size:28px;padding:8px 14px}.abox,.afix{width:48px}}
+</style>
+</head>
+<body><main class="app">
+<h1>Standard Algorithm: Addition</h1>
+<p class="sub" id="instr"></p>
+<section class="card">
+ <div id="trayWrap"><div class="tray" id="tray" data-drop="stage"></div></div>
+ <div class="frame" id="frame"></div>
+ <div class="msg" id="msg" role="status" aria-live="polite"></div>
+ <div class="help" id="help"></div>
+</section>
+<button class="next" id="next" type="button">New problem &#8635;</button>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+let nums=[47,86],place=['stage','stage'],ans=[],carried=[],suppress=false,finished=false;
+const dig=(x,k)=>{const s=String(x);return k<s.length?+s[s.length-1-k]:null};
+const slotIdx=w=>place.indexOf(w);
+function calc(){
+ const ti=slotIdx('top'),bi=slotIdx('bottom');
+ const placed=ti>=0&&bi>=0;
+ const top=ti>=0?nums[ti]:null,bot=bi>=0?nums[bi]:null;
+ const maxd=Math.max(String(nums[0]).length,String(nums[1]).length);
+ const sums=[],cin=[0];
+ for(let k=0;k<=maxd;k++){const s=(dig(nums[0],k)||0)+(dig(nums[1],k)||0)+cin[k];sums.push(s);cin.push(s>=10?1:0);}
+ return {placed,top,bot,maxd,sums,n:maxd+1};
+}
+const used=(m,k)=>k<m.maxd||m.sums[m.maxd-1]>=10;
+const complete=(m,k)=>ans[k]!==undefined&&(m.sums[k]<10||carried[k+1]);
+function current(m){for(let k=0;k<=m.maxd;k++){if(used(m,k)&&!complete(m,k))return k;}return null;}
+const locked=()=>ans.some(v=>v!==undefined);
+function render(){
+ const m=calc(),cur=m.placed?current(m):null,isLocked=locked();
+ const stageOfCur=cur===null?null:(ans[cur]===undefined?'digit':'carry');
+ finished=m.placed&&cur===null;
+ // instructions
+ $('instr').textContent=!m.placed?'Drag each number into the boxes below. Either number can go on top.':finished?'':'Add one column at a time, starting with the ones.';
+ // tray
+ const tray=$('tray');tray.innerHTML='';
+ $('trayWrap').hidden=isLocked;
+ nums.forEach((v,i)=>{if(place[i]!=='stage')return;const b=document.createElement('button');b.type='button';b.className='tile';b.textContent=v;b.dataset.i=i;b.setAttribute('aria-label',`Number ${v}, tap to place`);b.onclick=()=>{if(suppress)return;tapMove(i);};b.onpointerdown=e=>startDrag(e,i,b);tray.append(b);});
+ if(!tray.children.length)tray.textContent='Drag a number here to take it out';
+ // frame
+ const cols=[];for(let k=m.n-1;k>=0;k--)cols.push(k);
+ const cell=(k,inner,cls='')=>`<div class="c ${cls}${cur!==null&&k===cur?' act':''}">${inner}</div>`;
+ let h='';
+ // carry row
+ h+=`<div class="row cr"><div class="sg"></div><div class="cells">`+cols.map(k=>{
+  let inner='';
+  if(carried[k])inner=`<div class="cfix">1</div>`;
+  else if(stageOfCur==='carry'&&k===cur+1)inner=`<input class="cbox" id="inCarry" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="Carry to the next column">`;
+  return `<div class="c" style="height:44px">${inner}</div>`;}).join('')+`</div></div>`;
+ // number rows
+ const slotRow=(which,sign,val,cls)=>{
+  const empty=val===null;
+  const cells=cols.map(k=>cell(k,empty?'':(dig(val,k)??''))).join('');
+  const attrs=empty||isLocked?'':` role="button" tabindex="0" aria-label="${val}, drag to move or press Enter to take out"`;
+  return `<div class="row ${cls}"><div class="sg">${sign}</div><div class="cells slot ${empty?'empty':''}" data-drop="${which}" data-slot="${which}"${attrs}>${cells}</div></div>`;};
+ h+=slotRow('top','',m.top,'top')+slotRow('bottom','+',m.bot,'bot');
+ // answer row
+ if(m.placed){
+  h+=`<div class="row ar"><div class="sg"></div><div class="cells">`+cols.map(k=>{
+   let inner='';
+   if(ans[k]!==undefined)inner=`<div class="afix">${ans[k]}</div>`;
+   else if(k===cur&&stageOfCur==='digit')inner=`<input class="abox" id="inAns" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="${k===0?'Ones':k===1?'Tens':k===2?'Hundreds':'Thousands'} answer">`;
+   else if(k<m.maxd)inner=`<div class="afix wait"></div>`;
+   return `<div class="c">${inner}</div>`;}).join('')+`</div></div>`;
+ }
+ $('frame').innerHTML=h;
+ // messages
+ if(finished){$('msg').className='msg good';$('msg').textContent=`✓ Correct! ${nums[0]} + ${nums[1]} = ${nums[0]+nums[1]}. Great work!`;$('help').textContent='';}
+ else{if($('msg').classList.contains('good')){$('msg').className='msg';$('msg').textContent='';}
+  $('help').textContent=!m.placed?'':stageOfCur==='carry'?'Carry the tens digit of the sum to the next column.':cur===0?'Add the ones. Write the ones digit below the line.':'Add the digits in this column. Don’t forget any number you carried.';}
+ // wire inputs and drag
+ const ia=$('inAns'),ic=$('inCarry');
+ if(ia){ia.oninput=()=>onAns(ia,m,cur);ia.focus();}
+ if(ic){ic.oninput=()=>onCarry(ic,m,cur);ic.focus();}
+ if(!isLocked)document.querySelectorAll('#frame .slot[data-slot]').forEach(el=>{
+  const w=el.dataset.slot,i=slotIdx(w);if(i<0)return;
+  el.onpointerdown=e=>startDrag(e,i,el);
+  el.onclick=()=>{if(suppress)return;place[i]='stage';render();};
+  el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();place[i]='stage';render();}};});
+}
+function setMsg(t){$('msg').className='msg';$('msg').textContent=t;}
+function onAns(el,m,k){
+ const v=el.value.replace(/\D/g,'');if(v===''){el.value='';return;}
+ const want=m.sums[k]%10,n=+v;
+ if(n===want){ans[k]=n;setMsg('');render();return;}
+ el.value='';
+ const a=dig(m.top,k),b=dig(m.bot,k);
+ if(k===m.maxd){setMsg('Bring down the 1 you carried.');return;}
+ if(m.sums[k]>=10&&n===Math.floor(m.sums[k]/10)){setMsg('Write only the ones digit here. The tens digit gets carried to the next column.');return;}
+ const parts=[a,b].filter(x=>x!==null);if(carried[k])parts.push(1);
+ setMsg(`Not quite. Add this column: ${parts.join(' + ')}${carried[k]?' (the 1 includes your carry)':''}.`);
+}
+function onCarry(el,m,k){
+ const v=el.value.replace(/\D/g,'');if(v===''){el.value='';return;}
+ if(+v===1){carried[k+1]=true;setMsg('');render();return;}
+ el.value='';setMsg(`Carry only the tens digit of ${m.sums[k]}.`);
+}
+function tapMove(i){place[i]=slotIdx('top')<0?'top':'bottom';render();}
+function startDrag(e,i,src){
+ if(e.button>0||locked())return;
+ const sx=e.clientX,sy=e.clientY;let ghost=null;
+ const zones=()=>[...document.querySelectorAll('[data-drop]')].filter(z=>!z.closest('[hidden]'));
+ const hit=(z,x,y)=>{const r=z.getBoundingClientRect();return x>=r.left-8&&x<=r.right+8&&y>=r.top-8&&y<=r.bottom+8;};
+ const mv=ev=>{
+  if(!ghost){if(Math.hypot(ev.clientX-sx,ev.clientY-sy)<8)return;
+   ghost=document.createElement('div');ghost.className='tile ghost';ghost.textContent=nums[i];document.body.append(ghost);src.style.opacity='.3';}
+  ghost.style.left=ev.clientX-ghost.offsetWidth/2+'px';ghost.style.top=ev.clientY-ghost.offsetHeight/2+'px';
+  zones().forEach(z=>z.classList.toggle('over',hit(z,ev.clientX,ev.clientY)));};
+ const up=ev=>{
+  window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',up);
+  const zs=zones();zs.forEach(z=>z.classList.remove('over'));
+  if(ghost){ghost.remove();src.style.opacity='';suppress=true;setTimeout(()=>suppress=false,0);
+   if(ev.type==='pointerup'){const z=zs.find(z=>hit(z,ev.clientX,ev.clientY));if(z)moveTo(i,z.dataset.drop);}}};
+ window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+}
+function moveTo(i,target){
+ if(target!=='stage'){const j=place.findIndex((p,x)=>p===target&&x!==i);if(j>=0)place[j]=place[i];}
+ place[i]=target;render();
+}
+function newProblem(){
+ const pick=()=>{const len=Math.random()<.5?2:3;const lo=len===2?10:100,hi=len===2?99:999;return lo+Math.floor(Math.random()*(hi-lo+1));};
+ const carries=(a,b)=>{let c=0,any=false,x=a,y=b;while(x>0||y>0||c>0){const s=(x%10)+(y%10)+c;c=s>=10?1:0;if(c)any=true;x=Math.floor(x/10);y=Math.floor(y/10);if(x===0&&y===0)break;}return any;};
+ let a,b;const need=Math.random()<.85;
+ do{a=pick();b=pick();}while(a===b||(need&&!carries(a,b)));
+ nums=[a,b];place=['stage','stage'];ans=[];carried=[];$('msg').textContent='';render();
+}
+$('next').onclick=newProblem;
+newProblem();
+})();
+</script></body></html>
