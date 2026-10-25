@@ -9,6 +9,8 @@ h1{font-size:clamp(22px,4vw,30px);margin:0 0 6px;text-align:center}.sub{color:#5
 .card{background:#fff;border:1px solid #d9e1eb;border-radius:16px;padding:18px;margin:12px 0;box-shadow:0 2px 8px #152b4310}
 .tray{display:flex;gap:14px;justify-content:center;align-items:center;min-height:84px;border:2px dashed #afbed1;border-radius:14px;padding:10px;color:#8491a2;font-size:14px}
 .tray.over,.cells.over{border-color:#5144c6;background:#f0eefc}
+.plus{font-size:40px;font-weight:800;color:#5e6d81;line-height:1}
+.tray.arrow{font-size:34px;color:#afbed1}
 .tile{font-size:34px;font-weight:800;padding:10px 20px;border:2px solid #5144c6;background:#fff;color:#18253a;border-radius:12px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-variant-numeric:tabular-nums;box-shadow:0 2px 6px #5144c622}
 .tile:focus-visible,.slot:focus-visible{outline:3px solid #7268e4;outline-offset:2px}
 .ghost{position:fixed;z-index:50;pointer-events:none;opacity:.9;margin:0}
@@ -80,8 +82,8 @@ function render(){
  // tray
  const tray=$('tray');tray.innerHTML='';
  $('trayWrap').hidden=isLocked;
- nums.forEach((v,i)=>{if(place[i]!=='stage')return;const b=document.createElement('button');b.type='button';b.className='tile';b.textContent=v;b.dataset.i=i;b.setAttribute('aria-label',`Number ${v}, tap to place`);b.onclick=()=>{if(suppress)return;tapMove(i);};b.onpointerdown=e=>startDrag(e,i,b);tray.append(b);});
- if(!tray.children.length)tray.textContent='Drag a number here to take it out';
+ nums.forEach((v,i)=>{if(place[i]!=='stage')return;const b=document.createElement('button');b.type='button';b.className='tile';b.textContent=v;b.dataset.i=i;b.setAttribute('aria-label',`Number ${v}, tap to place`);b.onclick=()=>{if(suppress)return;tapMove(i);};b.onpointerdown=e=>startDrag(e,i,b);if(place[0]==='stage'&&place[1]==='stage'&&i===1){const p=document.createElement('span');p.className='plus';p.textContent='+';p.setAttribute('aria-label','plus');tray.append(p);}tray.append(b);});
+ if(!tray.children.length){tray.textContent='\u2191';tray.classList.add('arrow');}else tray.classList.remove('arrow');
  // frame
  const cols=[];for(let k=m.n-1;k>=0;k--)cols.push(k);
  const cell=(k,inner,cls='')=>`<div class="c ${cls}${cur!==null&&k===cur?' act':''}">${inner}</div>`;
